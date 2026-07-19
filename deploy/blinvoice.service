@@ -1,0 +1,17 @@
+[Unit]
+Description=BL Invoice Generation
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/blinvoice
+Environment=BLINVOICE_HOST=127.0.0.1
+Environment=BLINVOICE_PORT=8000
+Environment=BLINVOICE_DATA_DIR=/opt/blinvoice/data
+ExecStart=/opt/blinvoice/.venv/bin/python /opt/blinvoice/app.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
