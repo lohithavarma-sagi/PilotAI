@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!--
+      SimConnect's managed wrapper is a classic .NET Framework assembly.
+      net48 is the safest target for compatibility with the SDK DLL shipped
+      alongside most Prepar3D versions; bump this if your SDK's DLL is built
+      for a newer target and net48 fails to load it.
+    -->
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>PilotAI.Connector</RootNamespace>
+    <AssemblyName>PilotAI.Connector</AssemblyName>
+    <Nullable>disable</Nullable>
+
+    <!--
+      Point this at the SimConnect managed DLL from your simulator's SDK install, e.g.:
+        MSFS:      C:\MSFS SDK\SimConnect SDK\lib\managed\Microsoft.FlightSimulator.SimConnect.dll
+        Prepar3D:  C:\Prepar3D v5 SDK\SimConnect SDK\lib\managed\Microsoft.FlightSimulator.SimConnect.dll
+      Override without editing this file:
+        dotnet build -p:SimConnectDllPath="C:\path\to\Microsoft.FlightSimulator.SimConnect.dll"
+    -->
+    <SimConnectDllPath Condition="'$(SimConnectDllPath)' == ''">C:\MSFS SDK\SimConnect SDK\lib\managed\Microsoft.FlightSimulator.SimConnect.dll</SimConnectDllPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.FlightSimulator.SimConnect">
+      <HintPath>$(SimConnectDllPath)</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

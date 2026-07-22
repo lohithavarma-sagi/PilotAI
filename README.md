@@ -1,132 +1,91 @@
-# BL Invoice Generation
+# PilotAI
 
-In-house invoice generator for the Banking Labs Excel upload flow. Admin users upload the invoice Excel, the app validates master data from SQLite, generates one or more invoice PDFs, and keeps full upload/invoice history.
+A local, offline flight-instructor assistant for a Cessna 172 in Microsoft
+Flight Simulator / Prepar3D. A student flies a short flight (~5 minutes);
+the moment the engine is shut down, PilotAI automatically analyzes the
+recording and generates a professional, printable instructor PDF report --
+no manual steps, no server, no internet connection required.
 
-## Local Run
+```
+Microsoft Flight Simulator
+   |
+   | SimConnect
+   v
+Connector/ (C#, Windows + sim only)
+   - connects, auto-records from the moment it connects
+   - detects engine shutdown -> stops recording
+   - automatically runs: python run_pilotai.py --analyze <recording>
+   v
+Engine/ (Python) -- replay + phase detection + checklist + mistake
+                    detection + scoring, all in one local batch pass
+   v
+Reports/ (Python) -- instructor summary + JSON + PDF + text report
+```
+
+No web dashboard, no live voice coaching, no networking beyond the local
+SimConnect connection, no cloud services, nothing paid. See
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full reasoning behind
+this shape and what an earlier, more ambitious version of PilotAI looked
+like before this refactor.
+
+## Quick start
+
+Try the whole pipeline right now with no simulator:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
 pip install -r requirements.txt
-python app.py
+python3 run_pilotai.py --test
 ```
 
-Open `http://127.0.0.1:8000`.
+This generates a synthetic ~8-minute Cessna 172 flight, analyzes it, and
+writes `Data/flights/test_flight_..._report.pdf` (plus `.json` and `.txt`).
+That's the same pipeline a real recorded flight goes through -- see
+[docs/INSTALL.md](docs/INSTALL.md) for connecting the C# Connector to a
+real simulator session, where the whole thing runs automatically the
+moment the engine is shut down.
 
-Default login:
+## What's here
 
-```text
-username: admin
-password: admin123
-```
+| Folder | What it does | Runs on |
+|---|---|---|
+| `Connector/` | SimConnect, auto-record, auto-detect flight end, auto-launch analysis | Windows, with the sim |
+| `Engine/` | Phase detection, checklist tracking, mistake detection, scoring | Any OS |
+| `Reports/` | Instructor summary + JSON/PDF/text report generation | Any OS |
+| `Tests/` | Automated tests for all of the above | Any OS |
+| `Data/` | Recorded flights, generated reports, logs, nothing else | - |
 
-Create a new admin user after first login and stop using the default password.
+Only `Connector/` needs Windows and the simulator. Everything else --
+including the entire `--test` path -- runs anywhere Python does.
 
-## Excel Upload Format
+## Documentation
 
-Use **Download Template** in the app. The upload sheet must contain these columns:
+- [docs/INSTALL.md](docs/INSTALL.md) -- installing and running both halves
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) -- how the pieces fit together and why
+- [docs/API.md](docs/API.md) -- telemetry schema, report shape, module reference
+- [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) -- codebase tour, how to extend it
+- [docs/ROADMAP.md](docs/ROADMAP.md) -- known limitations and what's next
 
-```text
-InvoiceDate, InvoiceMonth, BankingLabsLocation, Customer, ResourceName, Task, Currency, Rate, Hours, InvoiceType, LTO, PONumber
-```
+## Known limitations (read this before demoing)
 
-Notes:
-
-- `BankingLabsLocation`, `Customer`, and `Task` are resolved from master data.
-- `Customer` may be the external customer code, customer name, or the template dropdown value like `2 - Bank of Montreal`.
-- `LTO` is optional. If present, it is shown on the invoice PDF.
-- Invoices are grouped by invoice date, location, customer, currency, PO number, and LTO.
-
-## Data Storage
-
-By default the app stores runtime data under:
-
-```text
-data/
-```
-
-This includes:
-
-- `blinvoice.sqlite3`
-- uploaded Excel files
-- generated PDFs
-- `secret.key` for session signing
-
-Override paths with:
-
-```bash
-export BLINVOICE_DATA_DIR=/opt/blinvoice/data
-export BLINVOICE_DB=/opt/blinvoice/data/blinvoice.sqlite3
-```
-
-## EC2 Deployment
-
-Example for Ubuntu on EC2:
-
-```bash
-sudo apt-get update
-sudo apt-get install -y python3 python3-venv nginx
-sudo mkdir -p /opt/blinvoice
-sudo chown ubuntu:ubuntu /opt/blinvoice
-```
-
-Example for Amazon Linux 2023 on EC2 (`venv` ships inside the base `python3` package, so there is no separate `python3-venv` package to install):
-
-```bash
-sudo yum install -y python3 python3-pip nginx
-sudo mkdir -p /opt/blinvoice
-sudo chown ec2-user:ec2-user /opt/blinvoice
-```
-
-Copy this project to `/opt/blinvoice`, then:
-
-```bash
-cd /opt/blinvoice
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-mkdir -p data
-BLINVOICE_HOST=127.0.0.1 BLINVOICE_PORT=8000 python app.py
-```
-
-For a persistent service:
-
-```bash
-sudo cp deploy/blinvoice.service /etc/systemd/system/blinvoice.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now blinvoice
-sudo systemctl status blinvoice
-```
-
-For public access through a domain or public IP, use Nginx as a reverse proxy.
-
-On Ubuntu (uses the `sites-available`/`sites-enabled` convention):
-
-```bash
-sudo cp deploy/nginx.conf /etc/nginx/sites-available/blinvoice
-sudo ln -s /etc/nginx/sites-available/blinvoice /etc/nginx/sites-enabled/blinvoice
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-On Amazon Linux (no `sites-available` directory; config files are auto-included from `conf.d`):
-
-```bash
-sudo cp deploy/nginx.conf /etc/nginx/conf.d/blinvoice.conf
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-Open EC2 security group inbound ports:
-
-- `80` for HTTP
-- `443` for HTTPS when TLS is configured
-- Do not expose port `8000` publicly; keep it bound to `127.0.0.1`.
-
-## Production Notes
-
-- Put the app behind HTTPS before real invoice data is used.
-- Replace the default admin password immediately.
-- Back up `/opt/blinvoice/data` regularly. The SQLite DB, uploaded Excel files, and generated PDFs are all stored there.
-- If the EC2 username is not `ubuntu`, update `deploy/blinvoice.service`.
-- Update `server_name` in `deploy/nginx.conf` to your domain name or public IP.
+- **The C# Connector is unverified by compilation.** It was developed
+  without access to Windows, MSFS/Prepar3D, or the SimConnect SDK -- there
+  is no `dotnet` toolchain or SimConnect DLL available in this development
+  environment. Build it on the actual sim PC before the demo and budget
+  time to fix any compile-time surprises.
+- **Cessna 172 has fixed gear.** "Gear not retracted" / "gear warning"
+  checks will never fire for this airframe; they're wired up so the same
+  code works unmodified on a retractable-gear aircraft.
+- **One continuous flight per recording**, forward-only through 11 phases
+  (Flight Start through Shutdown). Touch-and-goes and multiple landings in
+  one session aren't modeled yet -- see [docs/ROADMAP.md](docs/ROADMAP.md).
+- **No wind/crosswind telemetry.** Crosswind-correction commentary is a
+  heuristic from bank angle and heading, not a true wind measurement.
+- **Rules engine, not a trained model.** Every threshold is a documented,
+  tunable constant (see `Engine/mistake_detector.py`, `Engine/scoring_engine.py`),
+  not a machine-learned one -- see docs/ARCHITECTURE.md for why that's the
+  deliberate choice for a report an instructor needs to be able to trust.
+- **Instructor Summary is template-based by default**, fully offline and
+  free. It can optionally use a *local* LLM (e.g. Ollama) if one is
+  configured -- see `Reports/instructor_summary.py` -- but that's opt-in and
+  never a cloud/paid dependency; if it's not configured or not reachable,
+  generation falls back to the template automatically.

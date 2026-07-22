@@ -1,4 +1,10 @@
-data/
-.venv/
 __pycache__/
 *.pyc
+Connector/bin/
+Connector/obj/
+Data/flights/*
+!Data/flights/.gitkeep
+Data/logs/*
+!Data/logs/.gitkeep
+Data/config/*
+!Data/config/.gitkeep
