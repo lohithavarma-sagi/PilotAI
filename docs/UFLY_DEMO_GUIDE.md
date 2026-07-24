@@ -3,6 +3,16 @@
 This is the offline reference for testing and presenting PilotAI at UFly.
 Bring this file (or a printout) in case Wi-Fi is unreliable on-site.
 
+**Confirmed target environment:** Prepar3D **4.5.13.32097**, SimConnect
+**4.5.0.0**. The simvars PilotAI reads (`INDICATED ALTITUDE`,
+`AIRSPEED INDICATED`, `PLANE PITCH DEGREES`, etc. -- see
+`Connector/SimConnectReader.cs`) are all core simvars that have existed
+since FSX and are unchanged in P3D v4, so there is no telemetry
+compatibility risk with this version. `Connector/PilotAI.Connector.csproj`
+is configured for this environment: `net48` target, `x64` platform (P3D v4
+is 64-bit-only), and defaults its `SimConnectDllPath` at the Prepar3D v4
+SDK location.
+
 ## 1. Architecture: can PilotAI run with the Mac + UFly's Windows sim PC?
 
 **The hard constraint:** SimConnect's client library only runs on Windows.
@@ -38,42 +48,40 @@ you can't fully test in advance.
 
 ### Config files needed for A/B
 
-On the **UFly PC**, e.g.
-`%ProgramData%\Lockheed Martin\Prepar3D v5\SimConnect.xml`:
-```xml
-<?xml version="1.0" encoding="Windows-1252"?>
-<SimBase.Document Type="SimConnect" version="1,0">
-  <Descr>SimConnect</Descr>
-  <Filename>SimConnect.xml</Filename>
-  <SimConnect.Comm>
-    <Descr>Comm</Descr>
-    <Protocol>IPv4</Protocol>
-    <Scope>global</Scope>
-    <MaxClients>8</MaxClients>
-    <Port>500</Port>
-    <MaxRecvSize>41088</MaxRecvSize>
-    <DisableNagle>False</DisableNagle>
-  </SimConnect.Comm>
-</SimBase.Document>
-```
-*(Verify exact path/schema against Lockheed Martin's official SimConnect
-SDK docs for UFly's specific Prepar3D version -- this is a strong starting
-template, not verified against a live install.)*
+Two ready-to-use templates are tracked in the repo at
+`Connector/config-templates/` -- copy each one to its destination below and
+rename it (dropping the `.template` suffix). Neither file is committed to
+git with a real IP in it (`Data/config/` -- where the real, filled-in copy
+should live if it stays on this machine -- is gitignored on purpose, since
+it's machine-specific).
 
-On the **Connector's machine**, `SimConnect.cfg` next to `PilotAI.Connector.exe`:
-```ini
-[SimConnect]
-Protocol=IPv4
-Address=<UFly sim PC's LAN IP>
-Port=500
-MaxReceiveSize=41088
-DisableNagle=0
+**On the UFly PC** (where Prepar3D runs), copy
+`Connector/config-templates/SimConnect.xml.template` to:
 ```
+%ProgramData%\Lockheed Martin\Prepar3D v4\SimConnect.xml
+```
+(this is the confirmed path for Prepar3D 4.5.13.32097). If that file
+already exists with other `<SimConnect.Comm>` blocks in it from another
+add-on, add this one alongside them -- don't delete existing entries.
 
-**No code changes needed.** `SimConnectReader.cs` already looks up config
-index 0 (`new SimConnect(AppName, IntPtr.Zero, 0, _simConnectEvent, 0)`),
-which reads entry `[SimConnect]` in `SimConnect.cfg` -- point that one entry
-at the remote address and the same code connects remotely.
+**On the Connector's machine** (wherever `PilotAI.Connector.exe` runs from,
+if that's a different PC than the one above), copy
+`Connector/config-templates/SimConnect.cfg.template` to `SimConnect.cfg`
+next to the built `.exe`, and replace `UFLY_SIM_PC_LOCAL_IPV4` with the
+sim PC's actual local IPv4 address (get this from UFly directly, e.g. via
+`ipconfig` on the sim PC itself -- don't guess it).
+
+**No code changes needed for either file.** `SimConnectReader.cs` already
+opens SimConnect with config index 0
+(`new SimConnect(AppName, IntPtr.Zero, 0, _simConnectEvent, 0)`), which
+makes the SimConnect DLL itself read the `[SimConnect]` section of
+`SimConnect.cfg` -- pointing that one entry at the remote address is the
+entire mechanism, handled by SimConnect itself, not by PilotAI's code.
+
+If the Connector runs directly on the same PC as Prepar3D (the
+recommended first test, option C below), **neither file is needed at
+all** -- SimConnect defaults to a local connection with no config file
+present.
 
 ### Quick answers
 
@@ -130,16 +138,41 @@ dotnet run --project Connector        # Windows only
 
 | Step | Action | Expected result |
 |---|---|---|
-| 1 | Connect both machines to the same network | Both get an IP on the same subnet |
+| 1 | Connect both machines to the same network (only if Connector and Prepar3D are on different PCs -- see Option A/B/C above) | Both get an IP on the same subnet |
 | 2 | Open Prepar3D, load the Cessna 172 | Sim running |
-| 3 | Start the Connector | `"PilotAI Connector starting..."` |
-| 4 | Confirm connection | `"Connected to the simulator..."` |
-| 5 | Verify telemetry | `Data/flights/*.csv` growing with sensible values |
+| 3 | Start the Connector (`dotnet run --project Connector`, or the built `.exe`) | `"PilotAI Connector starting..."` |
+| 4 | Confirm connection | `"Connected to the simulator. Recording will start now and stop automatically after engine shutdown."` |
+| 5 | Verify telemetry | `Data/flights/*.csv` growing with sensible, changing altitude/airspeed values |
 | 6 | Fly ~5 minutes | Taxi, takeoff, cruise, land |
-| 7 | Shut engine down, brake set | `"Engine shutdown detected -- flight complete."` |
-| 8 | Wait for analysis | `"Report generated successfully."` (seconds, not minutes) |
-| 9 | Find the PDF | `Data/flights/flight_<timestamp>_report.pdf` |
-| 10 | Print it | Standard print dialog |
+| 7 | Shut engine down, brake set, wait ~3s | `"Engine shutdown detected -- flight complete."` |
+| 8 | Answer the two prompts in the same console | `Student Pilot Name:` then `Instructor/Supervisor Name:` |
+| 9 | Wait for analysis | `"Report generated successfully."` (seconds, not minutes) |
+| 10 | PDF opens automatically | Also printed in the console's completion banner: full path to the PDF, JSON, and text files |
+| 11 | Print it | Standard print dialog |
+
+## Pre-Flight Checklist
+
+Run through this before the student gets in the seat:
+
+- [ ] Prepar3D is running, Cessna 172 loaded, aircraft on the ramp/runway (not already airborne)
+- [ ] If Connector and Prepar3D are on different PCs: both machines pingable on the same subnet, `SimConnect.xml` in place on the sim PC, `SimConnect.cfg` in place next to `PilotAI.Connector.exe` with the correct IP (see "Config files needed for A/B" above)
+- [ ] `PilotAI.Connector.exe` builds/runs without error and prints `"PilotAI Connector starting..."`
+- [ ] Console shows `"Connected to the simulator..."` -- **not** the TEST MODE fallback message (that means SimConnect didn't actually connect)
+- [ ] `Data/flights/` is writable and has free disk space
+- [ ] You know the Student Pilot Name and Instructor/Supervisor Name you'll type in when prompted
+- [ ] A backup: a pre-generated sample PDF on hand, in case anything fails live
+
+## Post-Flight Checklist
+
+After the engine is shut down and the parking brake set:
+
+- [ ] Console printed `"Engine shutdown detected -- flight complete."`
+- [ ] Student Pilot Name / Instructor Name prompts answered
+- [ ] Console printed `"Report generated successfully."` and the completion banner with file paths
+- [ ] PDF opened automatically (or open it manually from the printed path if not)
+- [ ] Confirm all three files exist: `_report.pdf`, `_report.json`, `_report.txt`, next to the original `.json`/`.csv` recording in `Data/flights/`
+- [ ] Skim the PDF: title page names are correct, overall score and category scores look sane, at least one specific mistake has a timestamp and recommendation
+- [ ] If anything looks wrong, check `Data/logs/pilotai.log` before re-flying
 
 ## 4. Demo script
 
@@ -169,16 +202,60 @@ the scoring "AI" in the ML sense if pressed (it's a rules engine --
 say so, it's a strength: auditable, no training data needed); diving into
 C# internals unless asked.
 
+### Demonstrating PilotAI to your supervisor
+
+A concrete run-through, in order:
+
+1. **Set the stage (30s).** Give the 30-second pitch above before touching
+   the keyboard -- your supervisor should know what they're about to watch
+   before they watch it.
+2. **Fly the real thing.** Start the Connector, fly a real ~5-minute
+   pattern (or a short local flight) in front of them, and narrate the
+   automatic parts as they happen: "it's recording now, no button I
+   pressed for that" / "I just shut the engine down -- watch." This is
+   more convincing live than any slide.
+3. **Answer the two prompts on camera.** Type the student's real name and
+   your supervisor's name (or their own, if they want to see it) when
+   prompted -- it's a nice, concrete "this report is really about this
+   flight" moment.
+4. **Let the PDF open itself.** Don't open it manually -- let the
+   auto-open feature do it, and narrate that too.
+5. **Walk the PDF top to bottom** (60-90s): title page (names, date,
+   duration) -> executive summary (overall score, letter grade, one-line
+   verdict) -> category scores table -> one specific Key Mistake, read its
+   timestamp/explanation/recommendation aloud -> strengths -> instructor
+   summary paragraph.
+6. **Show `Tests/run_all.py` passing** (30s) as evidence the analysis logic
+   itself is tested, not just eyeballed.
+7. **Close on the constraints that matter to a supervisor:** runs fully
+   offline, no per-flight cost, no student data leaves the building, and
+   the scoring is a rules engine (auditable, not a black box) -- these are
+   usually the first questions a supervisor asks, so answering them before
+   they're asked lands well.
+
+If you can't fly live (no sim access in the room), fall back to
+`python3 run_pilotai.py --analyze` against a flight file brought on a USB
+drive -- steps 3-7 above are identical either way, since the Python half
+doesn't know or care whether the Connector or a file on disk produced the
+recording.
+
 ## 5. Status
 
 **COMPLETE:** full Python analysis pipeline (phase detection, checklist,
-mistake detection, scoring), instructor summary, PDF/JSON/text reports,
-30 passing tests, zero-cost local-only design.
+mistake detection, scoring), instructor summary, concise 1-3 page PDF plus
+full JSON/text reports, student/instructor name capture, auto-open +
+completion banner, 30 passing tests, zero-cost local-only design.
+Connector is configured for the confirmed UFly environment (P3D
+4.5.13.32097, `x64`, Prepar3D v4 SDK path) and remote-SimConnect config
+templates are in `Connector/config-templates/`.
 
-**NEEDS REAL-WORLD TESTING:** C# Connector compiling against a real
-SimConnect SDK, an actual SimConnect connection to Prepar3D, shutdown
-auto-detection against real telemetry, the automatic Python subprocess
-call on a real Windows machine, remote/networked SimConnect if attempted.
+**NEEDS REAL-WORLD TESTING:** C# Connector compiling against the real
+SimConnect SDK on a Windows machine, an actual SimConnect connection to
+Prepar3D, shutdown auto-detection against real telemetry, the automatic
+Python subprocess call (including the interactive name prompts) on a real
+Windows machine, remote/networked SimConnect if attempted -- none of this
+development environment has Windows, `dotnet`, or the SimConnect SDK
+available to compile and run it directly.
 
 **NOT REQUIRED FOR DEMO:** the optional local-LLM summary hook,
 multi-flight/touch-and-go support, any dashboard/voice (removed by
@@ -217,6 +294,19 @@ runs, or edit `PythonExecutable` in `Connector/Program.cs`; confirm
 check the `mistakes` list -- every deduction is fully explained with its
 threshold. Thresholds were tuned against synthetic data (documented in
 `docs/ROADMAP.md`), not a logic bug.
+
+**Console appears to hang after "Engine shutdown detected"** -- it's
+almost always waiting on the `Student Pilot Name:` / `Instructor/Supervisor
+Name:` prompts; look at the console, not a log file, and type the names.
+If you genuinely want to skip this (e.g. an unattended run), use
+`python3 run_pilotai.py --student-name "..." --instructor-name "..."`
+directly instead of relying on the Connector's automatic call.
+
+**PDF doesn't open automatically** -- auto-open is best-effort
+(`Data/logs/pilotai.log` will show why it failed, e.g. no default PDF
+viewer registered); the PDF still exists at the path printed in the
+completion banner -- open it manually, or run with `--no-open` to stop
+expecting it.
 
 ## 7. Final answer
 

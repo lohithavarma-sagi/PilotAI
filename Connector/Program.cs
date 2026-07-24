@@ -141,10 +141,17 @@ namespace PilotAI.Connector
         /// recording that was just finished -- this is what makes "shut the
         /// engine down and the PDF is just there" true, with no second
         /// command for the student or instructor to run.
+        ///
+        /// stdio is inherited (not redirected), so run_pilotai.py's
+        /// Student Pilot Name / Instructor Name prompts appear right in
+        /// this same console and PilotAI waits for them to be typed here --
+        /// that's why this blocks indefinitely instead of on a short
+        /// timeout, unlike a purely unattended subprocess call.
         /// </summary>
         private static void RunAnalysis(string repoRoot, string flightJsonPath)
         {
             Console.WriteLine("Analyzing flight and generating instructor report...");
+            Console.WriteLine("(You may be prompted below for the Student Pilot Name and Instructor/Supervisor Name.)");
             var psi = new ProcessStartInfo
             {
                 FileName = PythonExecutable,
@@ -161,12 +168,8 @@ namespace PilotAI.Connector
             {
                 using (var process = Process.Start(psi))
                 {
-                    bool finished = process.WaitForExit(60000);
-                    if (!finished)
-                    {
-                        Console.Error.WriteLine("Report generation is taking longer than expected -- check the PilotAI log for progress.");
-                    }
-                    else if (process.ExitCode != 0)
+                    process.WaitForExit();
+                    if (process.ExitCode != 0)
                     {
                         Console.Error.WriteLine($"Report generation exited with code {process.ExitCode} -- see Data/logs/pilotai.log.");
                     }

@@ -2,9 +2,16 @@
 
 A local, offline flight-instructor assistant for a Cessna 172 in Microsoft
 Flight Simulator / Prepar3D. A student flies a short flight (~5 minutes);
-the moment the engine is shut down, PilotAI automatically analyzes the
-recording and generates a professional, printable instructor PDF report --
+the moment the engine is shut down, PilotAI prompts for the student and
+instructor names, then automatically analyzes the recording and generates
+a concise (1-3 page), printable instructor PDF report that opens itself --
 no manual steps, no server, no internet connection required.
+
+Verified target simulator: Prepar3D 4.5.13.32097 / SimConnect 4.5.0.0 --
+see [docs/UFLY_DEMO_GUIDE.md](docs/UFLY_DEMO_GUIDE.md) for the full
+deployment guide, and `Connector/config-templates/` for the SimConnect
+config files needed if the Connector runs on a different PC than the
+simulator.
 
 ```
 Microsoft Flight Simulator

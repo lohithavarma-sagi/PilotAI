@@ -68,10 +68,16 @@ Options:
 | `--sample-interval SEC` | sample spacing for `--test` mode, default 0.5 |
 | `--data-dir DIR` | where `flights/` and `logs/` live, default `./Data` |
 | `--use-llm-summary` | prefer a configured local LLM for the Instructor Summary (see below), falling back to the template automatically |
+| `--student-name NAME` | student pilot name for the report title page; if omitted and stdin is a real console, prompted interactively |
+| `--instructor-name NAME` | instructor/supervisor name for the report title page; same interactive-prompt fallback |
+| `--no-open` | don't auto-open the generated PDF after it's written |
 
 This is exactly what `Connector/Program.cs` calls automatically once
 `FlightEndDetector` confirms the flight is over:
-`python run_pilotai.py --analyze <path-to-recording>`.
+`python run_pilotai.py --analyze <path-to-recording>`. stdio is inherited
+(not redirected), so the Student Pilot Name / Instructor Name prompts
+appear in the same console the Connector is running in, and the PDF opens
+automatically on whichever OS is running `run_pilotai.py`.
 
 ## The full instructor report shape
 
@@ -83,6 +89,8 @@ by `Reports/json_report.py`, and rendered as PDF/text by
 {
   "generated_at": "2026-07-21T19:00:08",
   "aircraft": "Cessna 172",
+  "student_name": "Jamie Rivera",
+  "instructor_name": "Capt. J. Ferreira",
   "flight_summary": {
     "date": "2026-07-21", "start_time": "...", "end_time": "...",
     "duration_sec": 484.0, "duration_str": "8m 4s",
@@ -106,6 +114,15 @@ by `Reports/json_report.py`, and rendered as PDF/text by
 Each `mistake` carries exactly the fields the spec requires: timestamp
 (`elapsed_sec` + `time`), `phase`/`category`, `severity`
 (minor/moderate/major), `explanation`, and `recommendation`.
+
+**The JSON and text reports render this dict in full.** `Reports/pdf_report.py`
+deliberately renders a *trimmed* view of the same dict -- title page,
+executive summary, category scores, the top ~6 mistakes by severity, top
+~5 strengths, top ~5 improvement areas, and a condensed instructor summary
+paragraph -- so the printed PDF stays to about 1-3 pages. Nothing about the
+underlying report data changes; only what the PDF chooses to show. If you
+need the complete mistake list or full timeline, use the sibling `.json` or
+`.txt` file.
 
 ## Instructor Summary backend (optional local LLM)
 

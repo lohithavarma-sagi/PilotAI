@@ -1,0 +1,28 @@
+; SimConnect.cfg -- CLIENT-side config for PilotAI.Connector.exe
+;
+; This file belongs on the machine that RUNS PilotAI.Connector.exe -- NOT
+; necessarily the same PC as Prepar3D. Copy it next to the built
+; PilotAI.Connector.exe (same folder as the .exe) and rename it from
+; "SimConnect.cfg.template" to "SimConnect.cfg".
+;
+; If the Connector runs directly on the same PC as Prepar3D, this file is
+; not needed at all -- SimConnect defaults to a local connection with no
+; config file present. Only add this file when the Connector runs on a
+; DIFFERENT PC than Prepar3D, talking to it over the LAN.
+;
+; SimConnectReader.cs opens SimConnect with ConfigIndex 0
+;   (new SimConnect(AppName, IntPtr.Zero, 0, _simConnectEvent, 0))
+; which makes the SimConnect DLL itself read the [SimConnect] section below
+; -- no PilotAI code change is needed to connect remotely.
+;
+; Replace UFLY_SIM_PC_LOCAL_IPV4 with the actual local IPv4 address of the
+; Windows PC running Prepar3D at UFly (e.g. 192.168.1.42). Do not guess
+; this value -- get it from the UFly sim PC itself (ipconfig) or from
+; whoever manages that network.
+
+[SimConnect]
+Protocol=IPv4
+Address=UFLY_SIM_PC_LOCAL_IPV4
+Port=500
+MaxReceiveSize=41088
+DisableNagle=0

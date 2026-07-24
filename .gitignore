@@ -8,3 +8,21 @@ Data/logs/*
 !Data/logs/.gitkeep
 Data/config/*
 !Data/config/.gitkeep
+
+# Claude Code local tool config -- machine-specific, not needed to build/run PilotAI
+.claude/
+
+# Python virtual environments
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Visual Studio / .NET local state (Connector/)
+.vs/
+*.user
+*.suo
+
+# OS-generated files
+.DS_Store
+Thumbs.db

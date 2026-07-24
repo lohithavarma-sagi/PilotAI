@@ -28,7 +28,11 @@ python3 run_pilotai.py --test
 ```
 
 This generates a synthetic Cessna 172 flight, analyzes it, and writes
-`Data/flights/test_flight_..._report.pdf` (plus `.json` and `.txt`).
+`Data/flights/test_flight_..._report.pdf` (plus `.json` and `.txt`). If
+run from a real terminal, it prompts for the Student Pilot Name and
+Instructor/Supervisor Name (used on the PDF title page) and then
+auto-opens the PDF when it's done; pass `--student-name`/`--instructor-name`
+to skip the prompts, or `--no-open` to skip auto-opening.
 
 Analyze an already-recorded flight (e.g. one the Connector produced):
 
@@ -59,21 +63,31 @@ Simulator or Prepar3D, since SimConnect only works locally.
    the modern SDK can still build as long as the .NET Framework 4.8
    targeting pack is present -- this normally ships with Visual Studio on
    Windows).
-2. Install the SimConnect SDK:
-   - **MSFS**: the [MSFS SDK](https://docs.flightsimulator.com/) installer.
-   - **Prepar3D**: the Prepar3D SDK installer (bundled with the sim or
-     downloadable separately).
+2. Install the SimConnect SDK. UFly's production simulator is
+   **Prepar3D 4.5.13.32097** (SimConnect **4.5.0.0**) -- use the Prepar3D
+   v4 SDK, bundled with the sim install or downloadable from Lockheed
+   Martin separately.
 3. Locate the managed SimConnect DLL, typically:
    ```
-   MSFS:      C:\MSFS SDK\SimConnect SDK\lib\managed\Microsoft.FlightSimulator.SimConnect.dll
-   Prepar3D:  C:\Prepar3D v5 SDK\SimConnect SDK\lib\managed\Microsoft.FlightSimulator.SimConnect.dll
+   Prepar3D v4: C:\Prepar3D v4 SDK\SimConnect SDK\lib\managed\Microsoft.FlightSimulator.SimConnect.dll
+   Prepar3D v5: C:\Prepar3D v5 SDK\SimConnect SDK\lib\managed\Microsoft.FlightSimulator.SimConnect.dll
+   MSFS:        C:\MSFS SDK\SimConnect SDK\lib\managed\Microsoft.FlightSimulator.SimConnect.dll
    ```
+   `Connector/PilotAI.Connector.csproj` already defaults to the Prepar3D v4
+   path and builds `x64` (P3D v4 is 64-bit-only) -- override either without
+   editing the file via `dotnet build -p:SimConnectDllPath="..."`.
 4. Make sure `python` is on your `PATH` on the same PC (test with
    `python --version` in the same terminal you'll run the Connector from).
    `Connector/Program.cs` shells out to `python run_pilotai.py --analyze ...`
    automatically after every flight -- if your install is `python3` or a
    specific virtual environment's interpreter instead, edit the
    `PythonExecutable` constant near the top of `Connector/Program.cs`.
+5. **Only if the Connector runs on a different PC than Prepar3D** (remote
+   SimConnect over the LAN): copy the templates in
+   `Connector/config-templates/` -- see
+   [UFLY_DEMO_GUIDE.md](UFLY_DEMO_GUIDE.md) for exactly where each one goes
+   and what each setting means. Running the Connector directly on the sim
+   PC needs neither file.
 
 ### 2.2 Build
 
@@ -108,8 +122,12 @@ it, even if the build succeeds.
    - Once the student shuts the engine down (parking brake set, stopped,
      sustained for a few seconds), it stops recording and automatically
      runs `python run_pilotai.py --analyze` on the recording.
-   - The PDF report appears in `Data/flights/` a few seconds later, with
-     no further input needed.
+   - You'll be prompted right there in the console for the **Student Pilot
+     Name** and **Instructor/Supervisor Name** -- these go on the PDF's
+     title page.
+   - The PDF report appears in `Data/flights/` a few seconds later and
+     opens automatically; a completion banner in the console shows the
+     full path to the PDF, JSON, and text files.
    - It then waits, ready to record the next flight -- useful for a co-op
      demo booth where several people fly one after another without
      restarting the app.

@@ -92,7 +92,8 @@ def build_performance_series(history: List[Dict[str, Any]]) -> Dict[str, List[fl
 
 def build_report(history: List[Dict[str, Any]], phase_events: List[Dict[str, Any]],
                   score_report: Dict[str, Any], checklist_summary: Dict[str, Any],
-                  aircraft: str = "Cessna 172", use_llm_summary: bool = False) -> Dict[str, Any]:
+                  aircraft: str = "Cessna 172", use_llm_summary: bool = False,
+                  student_name: Optional[str] = None, instructor_name: Optional[str] = None) -> Dict[str, Any]:
     categories = score_report["categories"]
     landing_metrics = score_report.get("landing_metrics")
     mistakes = score_report.get("mistakes", [])
@@ -111,6 +112,8 @@ def build_report(history: List[Dict[str, Any]], phase_events: List[Dict[str, Any
     report = {
         "generated_at": dt.datetime.now().isoformat(timespec="seconds"),
         "aircraft": aircraft,
+        "student_name": student_name or "Student Pilot",
+        "instructor_name": instructor_name or "Instructor",
         "flight_summary": build_flight_summary(history, phase_events),
         "timeline": build_timeline(phase_events, mistakes, checklist_summary.get("items", [])),
         "scores": {"overall_score": overall_score, "categories": categories},

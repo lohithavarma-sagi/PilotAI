@@ -14,13 +14,24 @@
     <Nullable>disable</Nullable>
 
     <!--
+      UFly's production simulator is Prepar3D 4.5.13.32097 (SimConnect
+      4.5.0.0), which is 64-bit only -- AnyCPU risks the build resolving to
+      32-bit and failing to load the native SimConnect.dll at runtime, so
+      this is pinned to x64. If PilotAI is ever pointed at a 32-bit
+      simulator install instead, change this back to AnyCPU.
+    -->
+    <PlatformTarget>x64</PlatformTarget>
+
+    <!--
       Point this at the SimConnect managed DLL from your simulator's SDK install, e.g.:
-        MSFS:      C:\MSFS SDK\SimConnect SDK\lib\managed\Microsoft.FlightSimulator.SimConnect.dll
-        Prepar3D:  C:\Prepar3D v5 SDK\SimConnect SDK\lib\managed\Microsoft.FlightSimulator.SimConnect.dll
-      Override without editing this file:
+        Prepar3D v4: C:\Prepar3D v4 SDK\SimConnect SDK\lib\managed\Microsoft.FlightSimulator.SimConnect.dll
+        Prepar3D v5: C:\Prepar3D v5 SDK\SimConnect SDK\lib\managed\Microsoft.FlightSimulator.SimConnect.dll
+        MSFS:        C:\MSFS SDK\SimConnect SDK\lib\managed\Microsoft.FlightSimulator.SimConnect.dll
+      Default below targets UFly's Prepar3D v4.5 install. Override without
+      editing this file:
         dotnet build -p:SimConnectDllPath="C:\path\to\Microsoft.FlightSimulator.SimConnect.dll"
     -->
-    <SimConnectDllPath Condition="'$(SimConnectDllPath)' == ''">C:\MSFS SDK\SimConnect SDK\lib\managed\Microsoft.FlightSimulator.SimConnect.dll</SimConnectDllPath>
+    <SimConnectDllPath Condition="'$(SimConnectDllPath)' == ''">C:\Prepar3D v4 SDK\SimConnect SDK\lib\managed\Microsoft.FlightSimulator.SimConnect.dll</SimConnectDllPath>
   </PropertyGroup>
 
   <ItemGroup>

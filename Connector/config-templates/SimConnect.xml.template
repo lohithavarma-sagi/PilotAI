@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!--
+  SimConnect.xml -- SERVER-side config. This file belongs on the Windows PC
+  that runs Prepar3D itself (UFly's sim PC), NOT on the machine running
+  PilotAI.Connector.exe (unless they're the same machine, in which case
+  this file isn't needed at all -- see the note in SimConnect.cfg.template).
+
+  Confirmed path for Prepar3D 4.5.13.32097:
+    %ProgramData%\Lockheed Martin\Prepar3D v4\SimConnect.xml
+  which typically expands to:
+    C:\ProgramData\Lockheed Martin\Prepar3D v4\SimConnect.xml
+
+  If that folder/file already exists with other <SimConnect.Comm> blocks in
+  it (e.g. from another add-on), ADD this block alongside them rather than
+  replacing the file -- do not delete existing entries.
+
+  After adding this file, Windows Firewall must also allow inbound
+  connections on the port below for Prepar3D.exe (or the port itself) --
+  see docs/UFLY_DEMO_GUIDE.md's Troubleshooting section.
+-->
+<SimBase.Document Type="SimConnect" version="1,0">
+  <Descr>SimConnect</Descr>
+  <Filename>SimConnect.xml</Filename>
+  <SimConnect.Comm>
+    <Descr>PilotAI remote connection</Descr>
+    <Protocol>IPv4</Protocol>
+    <Scope>global</Scope>
+    <MaxClients>8</MaxClients>
+    <Port>500</Port>
+    <MaxRecvSize>41088</MaxRecvSize>
+    <DisableNagle>False</DisableNagle>
+  </SimConnect.Comm>
+</SimBase.Document>

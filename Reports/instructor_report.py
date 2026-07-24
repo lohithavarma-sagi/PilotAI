@@ -21,12 +21,14 @@ logger = logging.getLogger("pilotai.reports")
 
 
 def generate_full_report(recorder, score_report: Dict[str, Any], checklist_summary: Dict[str, Any],
-                          flight_json_path: str, use_llm_summary: bool = False) -> Dict[str, str]:
+                          flight_json_path: str, use_llm_summary: bool = False,
+                          student_name: str = None, instructor_name: str = None) -> Dict[str, str]:
     """Builds and saves the JSON, PDF, and text report for a completed flight.
     Returns the paths written.
     """
     report = build_report(recorder.history, recorder.phase_events, score_report, checklist_summary,
-                           use_llm_summary=use_llm_summary)
+                           use_llm_summary=use_llm_summary,
+                           student_name=student_name, instructor_name=instructor_name)
 
     json_path = save_json_report(report, flight_json_path)
 
